@@ -46,7 +46,7 @@ for now:
 
 ~~~
 ansible-playbook -i hosts satellite.yml
-~
+~~~
 
 * login to satellite cli and setup ssh keys for foreman -> hypervisor 
 * pop in to satellite gui and provision the ospd vm against the hypervisor
