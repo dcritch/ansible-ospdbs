@@ -8,6 +8,7 @@ ansible-ospdbs is a set of ansible playbooks to bootstrap a Red Hat OpenStack di
 
 - a valid mainfest.zip in roles/satellite/files
 - a libvirt host to provision the ospd vm. the vm should have one nic on the satellite dhcp network, and one on a dedicated vlan for osp-d provisioning
+- overcloud images, downloaded from [here](https://access.redhat.com/downloads/content/191/ver=7/rhel---7/7/x86_64/product-downloads) or custom built and stored as .tar files in roles/openstack/files
 
 
 ## current state
@@ -30,6 +31,7 @@ these playbooks currently do the following:
      - Installs packages
      - Lays down an undercloud.conf via template/vars and runs openstack overcloud install
      - undercloud config (set up dns server, flavors)
+     - uploads overcloud images in to glance@undercloud
 
 ## running it
 

@@ -71,7 +71,7 @@
 
 ## install undercloud
 - name: ospd | install undercloud
-  command: openstack undercloud install
+  command: openstack undercloud install chdir=/home/stack
   sudo: yes
   sudo_user: stack
   tags:
@@ -126,3 +126,32 @@
     - control
     - compute
     - ceph
+# overcloud images
+- name: ospd | copy overcloud images
+  copy: src=deploy-ramdisk-ironic-7.1.0-39.tar dest=/home/stack/images/deploy-ramdisk.tar owner=stack group=stack
+  tags:
+  - overcloudimages
+- name: ospd | copy overcloud images
+  copy: src=discovery-ramdisk-7.1.0-39.tar dest=/home/stack/images/discovery-ramdisk.tar owner=stack group=stack
+  tags:
+  - overcloudimages
+- name: ospd | copy overcloud images
+  copy: src=overcloud-full-7.1.0-39.tar dest=/home/stack/images/overcloud-full.tar owner=stack group=stack
+  tags:
+  - overcloudimages
+- name: ospd | unpack overcloud images
+  command: tar -xvf /home/stack/images/{{ item }}.tar -C /home/stack/images
+  sudo: yes
+  sudo_user: stack
+  tags:
+  - overcloudimages
+  with_items:
+  - deploy-ramdisk
+  - discovery-ramdisk
+  - overcloud-full
+- name: ospd | upload overcloud images
+  shell: source ~/stackrc && openstack overcloud image upload chdir=/home/stack/images
+  sudo: yes
+  sudo_user: stack
+  tags:
+  - overcloudimages
