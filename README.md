@@ -23,7 +23,7 @@ these playbooks currently do the following:
      - Configures Satellite for provisioning. (Creates subnets, associates proxy, activation keys, etc)
      - Configures a libvirt compute resource in Satellite
 
-note: this is where a VM should then be built via hammer. the hammer syntax seems to support what I'm trying to do (see commented out code) but the call is not respecting my NICs. I'll look in to it, maybe file a bz. For now, you can go in to the GUI, create a new host with the libvirt source you supplied, with 2 nics and the specs you want.
+**note** this is where a VM should then be built via hammer. the hammer syntax seems to support what I'm trying to do (see commented out code) but the call is not respecting my NICs. I'll look in to it, maybe file a bz. For now, you can go in to the GUI, create a new host with the libvirt source you supplied, with 2 nics and the specs you want.
 
 - Deploys OpenStack director
      - Enables proper repos
