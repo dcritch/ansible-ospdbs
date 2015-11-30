@@ -38,15 +38,22 @@ these playbooks currently do the following:
 - create group_vars/{openstack,satellite} and hosts based on their .ex examples
 - customize files for your environment, with focus on networks
 - copy a manifest.zip in to roles/satellite/files
+- copy over discovery/deploy/overcloud tar images in to roles/openstack/files
 
 due to issues, this is split in to two playbooks. the first will deploy satellite, the second will deploy an ospd vm and deploy the undercloud. the goal is to do it in one run once the hammer issue is fixed.
 
 for now:
 
-* ansible-playbook -i hosts satellite.yml
+~~~
+ansible-playbook -i hosts satellite.yml
+~
+
 * login to satellite cli and setup ssh keys for foreman -> hypervisor 
 * pop in to satellite gui and provision the ospd vm against the hypervisor
+
+~~~
 * ansible-playbook -i hosts ospd.yml
+~~~
 
 ## issues
 
@@ -59,7 +66,9 @@ foreman$ ssh-copy-id root@hostname.com
 foreman$ ssh root@hostname.com
 ~~~
 
-- the hammer command is not honouring the compute/libvirt specifics when using kvm. may be possible with curl until it is fixed (bz??). another hypervisor may work fine, but haven't test them yet (RHEV, VMware, etc)
+
+
+the hammer command is not honouring the compute/libvirt specifics when using kvm. may be possible with curl until it is fixed (bz??). another hypervisor may work fine, but haven't test them yet (RHEV, VMware, etc)
 
 ## todo
 
