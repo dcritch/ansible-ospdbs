@@ -128,15 +128,15 @@
     - ceph
 # overcloud images
 - name: ospd | copy overcloud images
-  copy: src=deploy-ramdisk-ironic-7.1.0-39.tar dest=/home/stack/images/deploy-ramdisk.tar owner=stack group=stack
+  copy: src=deploy-ramdisk.tar dest=/home/stack/images/deploy-ramdisk.tar owner=stack group=stack
   tags:
   - overcloudimages
 - name: ospd | copy overcloud images
-  copy: src=discovery-ramdisk-7.1.0-39.tar dest=/home/stack/images/discovery-ramdisk.tar owner=stack group=stack
+  copy: src=discovery-ramdisk.tar dest=/home/stack/images/discovery-ramdisk.tar owner=stack group=stack
   tags:
   - overcloudimages
 - name: ospd | copy overcloud images
-  copy: src=overcloud-full-7.1.0-39.tar dest=/home/stack/images/overcloud-full.tar owner=stack group=stack
+  copy: src=overcloud-full.tar dest=/home/stack/images/overcloud-full.tar owner=stack group=stack
   tags:
   - overcloudimages
 - name: ospd | unpack overcloud images
