@@ -1,0 +1,8 @@
+---
+## playbook to deploy an openstack director vm
+
+- name: configure the openstack director vm
+  hosts: openstack
+  remote_user: root
+  roles:
+    - ospd

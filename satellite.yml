@@ -1,0 +1,8 @@
+---
+## playbook to deploy red hat satellite to support an openstack director installation
+
+- name: deploy the main satellite server
+  hosts: satellite
+  remote_user: root
+  roles:
+    - satellite

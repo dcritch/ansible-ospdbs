@@ -1,0 +1,58 @@
+---
+  certs:
+    generate: true
+    deploy: true
+    group: foreman
+  katello: true
+  foreman:
+    organizations_enabled: true
+    locations_enabled: true
+    initial_organization: {{ satellite_org }}
+    initial_location: {{ satellite_location }}
+    custom_repo: true
+    configure_epel_repo: false
+    configure_scl_repo: false
+    ssl: true
+    server_ssl_cert: /etc/pki/katello/certs/katello-apache.crt
+    server_ssl_key: /etc/pki/katello/private/katello-apache.key
+    server_ssl_ca: /etc/pki/katello/certs/katello-default-ca.crt
+    server_ssl_chain: /etc/pki/katello/certs/katello-default-ca.crt
+    websockets_encrypt: true
+    websockets_ssl_key: /etc/pki/katello/private/katello-apache.key
+    websockets_ssl_cert: /etc/pki/katello/certs/katello-apache.crt
+    unattended: true
+    admin_username: {{ satellite_admin }}
+    admin_password: "{{ satellite_password }}"
+  capsule:
+    register_in_foreman: true
+    pulp_master: true
+    puppet: true
+    puppetca: true
+    templates: false
+    tftp: true
+    tftp_servername: "{{ satellite_ip }}"
+    bmc: false
+    bmc_default_provider: ipmitool
+    dhcp: true
+    dhcp_option_domain:
+      - {{ satellite_domain }}
+    dhcp_interface: {{ mgmt_int }}
+    dhcp_gateway: {{ dhcp_gw }}
+    dhcp_range: {{ dhcp_range }}
+    dhcp_nameservers: {{ dns_server }}
+    dns: true
+    dns_zone: {{ dns_zone }}
+    dns_reverse: {{ dns_rev_zone }}
+    dns_inteface: {{ mgmt_int }}
+    dns_forwarders:
+      - "{{ dns_server }}"
+  "foreman::plugin::bootdisk": true
+  "foreman::plugin::discovery": true
+  "foreman::plugin::hooks": true
+  "foreman::plugin::tasks": true
+  "foreman::plugin::chef": false
+  "foreman::plugin::default_hostgroup": false
+  "foreman::plugin::puppetdb": false
+  "foreman::plugin::setup": false   
+  "foreman::plugin::templates": false
+  "katello::plugin::gutterball": true

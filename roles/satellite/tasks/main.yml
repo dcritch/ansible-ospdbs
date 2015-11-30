@@ -1,0 +1,237 @@
+---
+# firewall rules part 1
+- firewalld: service=http permanent=true state=enabled
+  tags:
+    - firewall
+- firewalld: service=https permanent=true state=enabled
+  tags:
+    - firewall
+- firewalld: service=tftp permanent=true state=enabled
+  tags:
+    - firewall
+- firewalld: service=dns permanent=true state=enabled
+  tags:
+    - firewall
+- firewalld: service=dhcp permanent=true state=enabled
+  tags:
+    - firewall
+- firewalld: port=5671/tcp permanent=true state=enabled
+  tags:
+    - firewall
+- firewalld: port=8140/tcp permanent=true state=enabled
+  tags:
+    - firewall
+- firewalld: port=9090/tcp permanent=true state=enabled
+  tags:
+    - firewall
+- command: firewall-cmd --reload
+  tags:
+    - firewall
+
+
+## until the ord update hits...
+#- name: register to rhn
+#  redhat_subscription: state=present username={{ rhn_user }} activationkey={{ rhn_activation_key }} pool='^(Red Hat Satellite)$' --org_id={{ rhn_org_id }}
+
+
+## until the ord update hits...
+- name: rhn | register to rhn
+  command: /usr/bin/subscription-manager register --activationkey={{ rhn_activation_key }} --org={{ rhn_org }}
+  tags:
+    - rhn
+
+## setup repos
+- name: rhn | configure red hat repos
+  command: subscription-manager repos --disable "*" --enable rhel-7-server-satellite-6.1-rpms --enable rhel-7-server-rpms --enable rhel-server-rhscl-7-rpms
+  tags:
+    - rhn
+
+## yum update
+- name: rhn | update packages
+  yum: name=* state=latest
+  tags:
+    - rhn
+
+## katello install
+- name: katello | package install
+  yum: name=katello state=latest
+  tags:
+    - katello
+
+- name: katello | copy answers file
+  template: src=answers.katello-installer.yaml.j2 dest=/etc/katello-installer/answers.katello-installer.yaml
+  tags:
+  - katello
+
+## katello installer
+- name: katello | installation
+  command: katello-installer
+  tags:
+  - katello
+
+## configure hammer
+- file: path=~/.hammer state=directory mode=0755
+  tags:
+  - hammercfg
+- name: hammer | setup cli config file
+  template: src=cli_config.yml.j2 dest=~/.hammer/cli_config.yml
+  tags:
+  - hammercfg
+
+## subscription manifest
+- name: hammer | copy subscription manifest file
+  copy: src=manifest.zip dest=/root/manifest.zip
+  tags:
+  - manifest
+- name: hammer | upload mainfest
+  command: hammer subscription upload --file /root/manifest.zip --organization {{ satellite_org }}
+  tags:
+  - manifest
+
+## enable repos
+- name: hammer | enable repos
+  command: hammer repository-set enable --organization {{ satellite_org }} --product "{{ item.value.product }}" --name "{{ item.value.name }}" --releasever {{ item.value.releasever }} --basearch {{ item.value.basearch }}
+  with_dict: repos
+  tags:
+  - repos
+# have to handle a bit different since no release tag
+- name: hammer | enable satellite tools repo
+  command: hammer repository-set enable --organization {{ satellite_org }} --product "Red Hat Enterprise Linux Server" --name "Red Hat Satellite Tools 6.1 (for RHEL 7 Server) (RPMs)" --basearch "x86_64"
+  tags:
+  - repos
+- name: hammer | enable satellite tools repo
+  command: hammer repository-set enable --organization {{ satellite_org }} --product "Red Hat Enterprise Linux Server" --name "Red Hat Enterprise Linux 7 Server - Extras (RPMs)" --basearch "x86_64"
+  tags:
+  - repos
+
+- shell: hammer repository list --organization {{ satellite_org }} | grep yum | awk '{print $1}'
+  register: repoids
+  tags:
+  - reposync
+
+## sync repos
+- name: hammer | sync repos 
+  command: hammer repository synchronize --id {{ item }} --organization {{ satellite_org }}
+  with_items: repoids.stdout.split('\n')
+  tags:
+  - reposync
+
+## create the mgmt subnet
+- name: hammer | create subnet
+  command: hammer subnet create --dhcp-id 1 --dns-id 1 --dns-primary {{ satellite_ip }} --domain-ids 1 --from {{ dhcp_start }} --to {{ dhcp_end }} --gateway {{ dhcp_gw }} --mask {{ subnet_mask }} --name {{ subnet_name }} --network {{ subnet_nw }} --tftp-id 1
+  tags:
+  - satellitecfg
+- name: hammer | associate domain capsule
+  command: hammer domain update --dns-id 1 --id 1
+  tags:
+  - satellitecfg
+## create the ospd prov subnet
+- name: hammer | create ospd subnet
+  command: hammer subnet create --from {{ ospd_nw_start }} --to {{ ospd_nw_end }} --gateway {{ ospd_nw_gw }} --name {{ ospd_nw_name }} --network {{ ospd_nw }} --mask {{ ospd_nw_mask }} --boot-mode Static --ipam "Internal DB"
+  tags:
+  - satellitecfg
+
+## associate resources to the org
+- name: hammer | org smart proxy
+  command: hammer organization add-smart-proxy --name {{ satellite_org }} --smart-proxy-id 1
+  tags:
+  - satellitecfg
+- name: hammer | org add domain
+  command: hammer organization add-domain --name {{ satellite_org }} --domain {{ satellite_domain }}
+  tags:
+  - satellitecfg
+- name: hammer | org add environment
+  command: hammer organization add-environment --name {{ satellite_org }} --environment {{ satellite_puppet_env }}
+  tags:
+  - satellitecfg
+- name: hammer | org add subnet
+  command: hammer organization add-subnet --name {{ satellite_org }} --subnet {{ subnet_name }}
+  tags:
+  - satellitecfg
+- name: hammer | org add subnet
+  command: hammer organization add-subnet --name {{ satellite_org }} --subnet {{ ospd_nw_name }}
+  tags:
+  - satellitecfg
+
+## associate resources to the location
+- name: hammer | location smart proxy
+  command: hammer location add-smart-proxy --name {{ satellite_location }} --smart-proxy-id 1
+  tags:
+  - satellitecfg
+- name: hammer | location domain
+  command: hammer location add-domain --name {{ satellite_location }} --domain {{ satellite_domain }}
+  tags:
+  - satellitecfg
+- name: hammer | location add environment
+  command: hammer location add-environment --name {{ satellite_location }} --environment {{ satellite_puppet_env }}
+  tags:
+  - satellitecfg
+- name: hammer | location add subnet
+  command: hammer location add-subnet --name {{ satellite_location }} --subnet {{ subnet_name }}
+  tags:
+  - satellitecfg
+- name: hammer | location add subnet
+  command: hammer location add-subnet --name {{ satellite_location }} --subnet {{ ospd_nw_name }}
+  tags:
+  - satellitecfg
+- name: hammer | location add organization
+  command: hammer location add-organization --name {{ satellite_location  }} --organization {{ satellite_org }}
+  tags:
+  - satellitecfg
+
+# no longer needed?
+#- name: hammer | location add medium
+#  command: hammer location add-medium --name {{ satellite_location  }} --medium "{{ satellite_org }}/Library/Red_Hat_7_Server_Kickstart_x86_64_7Server"
+#  tags:
+#  - satellitecfg
+
+
+# setup activation key
+- name: hammer | create activation key
+  command: hammer activation-key create --name {{ satellite_ak }} --lifecycle-environment Library --organization {{ satellite_org }}
+  tags:
+  - ak
+- shell: hammer  --csv subscription list --organization {{ satellite_org }} | grep -v "Name,Contract" | awk -F, '{print $8}'
+  register: subids
+  tags:
+  - ak
+- shell: hammer  --csv activation-key info --name {{ satellite_ak }} --organization {{ satellite_org }}| grep -v 'Name,ID' | awk -F, '{print $2}'
+  register: ak_id
+  tags:
+  - ak
+- name: hammer | add subs to activation key
+  command: hammer activation-key add-subscription --id {{ ak_id.stdout }} --subscription-id {{ item }}
+  with_items: subids.stdout.split('\n')
+  tags:
+  - ak
+- name: hammer | turn off autoattach on activation key
+  command: hammer activation-key update --auto-attach false --id {{ ak_id.stdout }} --organization {{ satellite_org }}
+  tags:
+  - ak
+
+# set globals
+- name: hammer | set global org param
+  command: hammer global-parameter set --name  "kt_org" --value  {{ satellite_org }}
+  tags:
+  - globals
+- name: hammer | set global ak param
+  command: hammer global-parameter set --name  "kt_activation_keys" --value {{ satellite_ak }}
+  tags:
+  - globals
+- name: hammer | set global ntp server
+  command: hammer global-parameter set --name  "ntp-server" --value {{ ntp_server }}
+  tags:
+  - globals
+
+
+
+# setup compute resource in satellite
+- name: hammer | configure compute resource in satellite
+  command: hammer compute-resource create --name {{ libvirt_host }} --locations {{ satellite_location }} --organizations {{ satellite_org }} --provider libvirt --url qemu+ssh://root@{{ libvirt_host }}/system
+  tags:
+  - compute
+
+# create the ospd vm
+# currently broken: hammer doesn't honor interface details
+#- name: hammer | create ospd VM
+#  command: hammer host create --name {{ ospd_host }} --compute-resource={{ libvirt_host }} --compute-attributes="cpus=2,memory=8589934592" --interface="primary=true,compute_type=bridge,compute_bridge=br0" --interface "primary=true,type=network,network=ospd,compute_model=virtio" --volume="capacity=40G,format_type=qcow2" --architecture-id 1 --build true --location mowax --medium-id 8 --root-pass d33znutz --organization-id 1 --environment-id 1 --architecture-id 1 --domain-id 1 --puppet-proxy-id 1 --operatingsystem-id 1 --partition-table-id 7 --subnet {{ subnet_name }} --provision-method build 

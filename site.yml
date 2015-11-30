@@ -1,0 +1,13 @@
+---
+## playbook to deploy Red Hat Satellite, along with any applicable capules.
+
+- name: deploy the main satellite server
+  hosts: satellite
+  remote_user: root
+  roles:
+    - satellite
+- name: configure the openstack director vm
+  hosts: opestack
+  remote_user: root
+  roles:
+    - ospd

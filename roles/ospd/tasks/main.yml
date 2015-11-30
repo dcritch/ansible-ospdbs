@@ -1,0 +1,128 @@
+---
+## setup repos
+- name: rhn | configure red hat repos
+  command: subscription-manager repos --enable=rhel-7-server-rpms --enable=rhel-7-server-optional-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-openstack-7.0-rpms --enable=rhel-7-server-openstack-7.0-director-rpms
+  tags:
+    - rhn
+
+## yum update
+- name: rhn | update packages
+  yum: name=* state=latest
+  tags:
+    - rhn
+
+## yum packages
+- name: rhn | install ospd-
+  yum: name=python-rdomanager-oscplugin state=latest
+  tags:
+    - rhn
+- name: rhn | install opentack-utils
+  yum: name=openstack-utils state=latest
+  tags:
+    - rhn
+
+## configure provisioning interface
+- name: ospd | create prov interface
+  template: src=ifcfg-ethX.j2 dest=/etc/sysconfig/network-scripts/ifcfg-{{ ospd_if }}
+  tags:
+  - ospdnic
+- name: ospd | bring prov nic online
+  command: ifup {{ ospd_if }}
+  tags:
+  - ospdnic
+
+
+## set hostname in /etc/hosts
+- name: ospd | set hostname in /etc/hosts
+  shell: echo $(facter ipaddress) $(hostname) $(hostname -s) | tee -a /etc/hosts
+  tags:
+    - ospdcf
+- name: ospd | enable ip forwarding
+  copy: src=ipforward.sysctl dest=/etc/sysctl.d/01-ipforward.conf
+  tags:
+  - ospdcfg
+- command: sysctl -w "net.ipv4.ip_forward=1"
+  tags:
+  - ospdcfg
+
+## create stack user (password decrypts to P@ssw0rd)
+- name: ospd | create stack user
+  user: name=stack shell=/bin/bash password=$6$rounds=656000$47cizb4beOY.uB9c$wTlFCrP62g/M0.UNl0IHLOOw.fuWvJwCQLLS8UeruI1T/tbAdKd8Wzhsy7SandrOtROwBn7FBZHTaZcZciXMd/ generate_ssh_key=yes ssh_key_bits=2048 ssh_key_file=.ssh/id_rsa
+  tags:
+  - stackuser
+- name: ospd | grant sudo to stack
+  copy: src=stack.sudo dest=/etc/sudoers.d/stack mode=0440
+  tags:
+  - stackuser
+
+## setup stack env
+- file: path=/home/stack/templates state=directory mode=0755 owner=stack group=stack
+  tags:
+  - stackuser
+- file: path=/home/stack/images state=directory mode=0755 owner=stack group=stack
+  tags:
+  - stackuser
+
+## configure undercloud.conf
+- name: ospd | undercloud.conf
+  template: src=undercloud.conf.j2 dest=/home/stack/undercloud.conf owner=stack group=stack
+  tags:
+  - undercloud
+
+## install undercloud
+- name: ospd | install undercloud
+  command: openstack undercloud install
+  sudo: yes
+  sudo_user: stack
+  tags:
+  - undercloudinstall
+
+## doesn't seem to dump to stack's home when run like that
+- name: ospd | copy stackrc
+  command: cp /root/stackrc /home/stack/stackrc
+  tags:
+  - undercloudinstall
+- name: ospd | chown stackrc
+  command: chown stack.stack /home/stack/stackrc
+  tags:
+  - undercloudinstall
+
+## configure overcloud
+- name: ospd | neutron set dns server for subnet
+  shell: source ~/stackrc && neutron subnet-update $(neutron  subnet-list -f csv -F id --quote none | grep -v id) --dns-nameserver {{ dns_server }}
+  sudo: yes
+  sudo_user: stack
+  tags:
+  - overcloudcfg
+- name: ospd | nova create baremetal flavor
+  shell: source ~/stackrc && openstack flavor create --id auto --ram 4096 --disk 40 --vcpus 1 baremetal
+  sudo: yes
+  sudo_user: stack
+  tags:
+  - overcloudcfg
+- name: ospd | nova config baremetal flavor
+  shell: source ~/stackrc && openstack flavor set --property "cpu_arch"="x86_64" --property "capabilities:boot_option"="local" baremetal
+  sudo: yes
+  sudo_user: stack
+  tags:
+  - overcloudcfg
+- name: ospd | nova create overcloud flavors
+  shell: source ~/stackrc && openstack flavor create --id auto --ram 4096 --disk 40 --vcpus 1 {{ item }}
+  sudo: yes
+  sudo_user: stack
+  tags:
+  - overcloudcfg
+  with_items:
+    - control
+    - compute
+    - ceph
+- name: ospd | nova config overcloud flavors
+  shell: source ~/stackrc && openstack flavor set --property "cpu_arch"="x86_64" --property "capabilities:boot_option"="local" --property "capabilities:profile"="$i" {{ item }}
+  sudo: yes
+  sudo_user: stack
+  tags:
+  - overcloudcfg
+  with_items:
+    - control
+    - compute
+    - ceph

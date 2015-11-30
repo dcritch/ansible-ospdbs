@@ -1,0 +1,16 @@
+[DEFAULT]
+image_path = .
+local_ip = {{ ospd_prov_ip }}/24
+undercloud_public_vip =  {{ ospd_pub_vip }}
+undercloud_admin_vip = {{ ospd_admin_vip }}
+local_interface = {{ ospd_if }}
+masquerade_network = {{ ospd_nw }}/24
+dhcp_start =  {{ ospd_nw_start }}
+dhcp_end = {{ ospd_nw_end }}
+network_cidr = {{ ospd_nw }}/24
+network_gateway = {{ ospd_prov_ip }}
+discovery_interface = br-ctlplane
+discovery_iprange = {{ ospd_disc_start }},{{ ospd_disc_end }}
+discovery_runbench = false
+undercloud_debug = true
+[auth]
