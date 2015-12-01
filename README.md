@@ -38,7 +38,7 @@ these playbooks currently do the following:
 
 ## running it
 
-- create group_vars/{openstack,satellite} and hosts based on their .ex examples
+- create group_vars/all and ./hosts based on their .ex examples
 - customize files for your environment, with focus on networks
 - copy a manifest.zip in to roles/satellite/files
 - copy over discovery/deploy/overcloud tar images in to roles/openstack/files
