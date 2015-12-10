@@ -39,6 +39,12 @@ these playbooks currently do the following:
 ## running it
 
 - create group_vars/all and ./hosts based on their .ex examples
+**note** password for the stack user must be encrypted. you can use the following to generate one:
+
+~~~
+python -c "from passlib.hash import sha512_crypt; import getpass; print sha512_crypt.encrypt(getpass.getpass())"
+~~~
+
 - customize files for your environment, with focus on networks
 - copy a manifest.zip in to roles/satellite/files
 - copy over discovery/deploy/overcloud tar images in to roles/openstack/files
@@ -55,7 +61,7 @@ ansible-playbook -i hosts satellite.yml
 * pop in to satellite gui and provision the ospd vm against the hypervisor
 
 ~~~
-* ansible-playbook -i hosts ospd.yml
+ansible-playbook -i hosts ospd.yml
 ~~~
 
 ## issues

@@ -33,12 +33,27 @@
 #- name: register to rhn
 #  redhat_subscription: state=present username={{ rhn_user }} activationkey={{ rhn_activation_key }} pool='^(Red Hat Satellite)$' --org_id={{ rhn_org_id }}
 
-
-## until the ord update hits...
 - name: rhn | register to rhn
-  command: /usr/bin/subscription-manager register --activationkey={{ rhn_activation_key }} --org={{ rhn_org }}
+  command: /usr/bin/subscription-manager register --username={{ rhn_user }} --password={{ rhn_password}}
   tags:
     - rhn
+
+- name: rhn | get pool id
+  shell: /usr/bin/subscription-manager list --all --available --matches="*Satellite*" | awk '/Pool ID/ {print $3}' | head -1
+  tags:
+    - rhn
+  register: pool_id
+
+- name: rhn | sub to satellite pool
+  command: /usr/bin/subscription-manager attach --pool={{ pool_id.stdout }}
+  tags:
+    - rhn
+
+## if using local satellite with a key
+#- name: rhn | register to rhn
+#  command: /usr/bin/subscription-manager register --activationkey={{ rhn_activation_key }} --org={{ rhn_org }} --force
+#  tags:
+#    - rhn
 
 ## setup repos
 - name: rhn | configure red hat repos
@@ -61,13 +76,13 @@
 - name: katello | copy answers file
   template: src=answers.katello-installer.yaml.j2 dest=/etc/katello-installer/answers.katello-installer.yaml
   tags:
-  - katello
+  - katello-install
 
 ## katello installer
 - name: katello | installation
-  command: katello-installer
+  shell: export LC_ALL="en_US.UTF-8"; export LANG="en_US.UTF-8"; /usr/sbin/katello-installer
   tags:
-  - katello
+  - katello-install
 
 ## configure hammer
 - file: path=~/.hammer state=directory mode=0755

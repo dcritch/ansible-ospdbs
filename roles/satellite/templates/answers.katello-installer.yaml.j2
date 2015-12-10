@@ -7,8 +7,8 @@
   foreman:
     organizations_enabled: true
     locations_enabled: true
-    initial_organization: {{ satellite_org }}
-    initial_location: {{ satellite_location }}
+    initial_organization: "{{ satellite_org }}"
+    initial_location: "{{ satellite_location }}"
     custom_repo: true
     configure_epel_repo: false
     configure_scl_repo: false
@@ -35,15 +35,15 @@
     bmc_default_provider: ipmitool
     dhcp: true
     dhcp_option_domain:
-      - {{ satellite_domain }}
-    dhcp_interface: {{ mgmt_int }}
-    dhcp_gateway: {{ dhcp_gw }}
-    dhcp_range: {{ dhcp_range }}
-    dhcp_nameservers: {{ dns_server }}
+      - "{{ satellite_domain }}"
+    dhcp_interface: "{{ mgmt_int }}"
+    dhcp_gateway: "{{ dhcp_gw }}"
+    dhcp_range: "{{ dhcp_range }}"
+    dhcp_nameservers: "{{ dns_server }}"
     dns: true
-    dns_zone: {{ dns_zone }}
-    dns_reverse: {{ dns_rev_zone }}
-    dns_inteface: {{ mgmt_int }}
+    dns_zone: "{{ dns_zone }}"
+    dns_reverse: "{{ dns_rev_zone }}"
+    dns_inteface: "{{ mgmt_int }}"
     dns_forwarders:
       - "{{ dns_server }}"
   "foreman::plugin::bootdisk": true
