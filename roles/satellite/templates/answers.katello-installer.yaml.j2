@@ -38,7 +38,7 @@
       - "{{ satellite_domain }}"
     dhcp_interface: "{{ mgmt_int }}"
     dhcp_gateway: "{{ dhcp_gw }}"
-    dhcp_range: "{{ dhcp_range }}"
+    dhcp_range: "{{ dhcp_start }} {{ dhcp_end }}"
     dhcp_nameservers: "{{ dns_server }}"
     dns: true
     dns_zone: "{{ dns_zone }}"

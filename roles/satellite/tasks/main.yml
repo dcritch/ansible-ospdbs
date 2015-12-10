@@ -29,31 +29,46 @@
     - firewall
 
 
-## until the ord update hits...
-#- name: register to rhn
-#  redhat_subscription: state=present username={{ rhn_user }} activationkey={{ rhn_activation_key }} pool='^(Red Hat Satellite)$' --org_id={{ rhn_org_id }}
-
 - name: rhn | register to rhn
-  command: /usr/bin/subscription-manager register --username={{ rhn_user }} --password={{ rhn_password}}
+  command: /usr/bin/subscription-manager register --username={{ rhn_user }} --password={{ rhn_password }}
   tags:
     - rhn
+  when: reg_method == "rhn"
 
 - name: rhn | get pool id
   shell: /usr/bin/subscription-manager list --all --available --matches="*Satellite*" | awk '/Pool ID/ {print $3}' | head -1
   tags:
     - rhn
   register: pool_id
+  when: reg_method == "rhn"
 
 - name: rhn | sub to satellite pool
   command: /usr/bin/subscription-manager attach --pool={{ pool_id.stdout }}
   tags:
     - rhn
+  when: reg_method == "rhn"
 
 ## if using local satellite with a key
-#- name: rhn | register to rhn
-#  command: /usr/bin/subscription-manager register --activationkey={{ rhn_activation_key }} --org={{ rhn_org }} --force
-#  tags:
-#    - rhn
+- name: rhn | install satellite certs
+  command: rpm -Uvh http://{{ rhn_host }}/pub/katello-ca-consumer-latest.noarch.rpm
+  tags:
+    - rhn
+  when: reg_method == "satellite"
+- name: rhn | puppet clean up
+  yum: name=puppet state=absent
+  tags:
+    - rhn
+  when: reg_method == "satellite"
+- shell: rm -rf /var/lib/puppet; rm -rf /etc/puppet
+  tags:
+    - rhn
+  when: reg_method == "satellite"
+
+- name: rhn | register to satellite
+  command: /usr/bin/subscription-manager register --activationkey={{ rhn_activation_key }} --org={{ rhn_org }} --force
+  tags:
+    - rhn
+  when: reg_method == "satellite"
 
 ## setup repos
 - name: rhn | configure red hat repos
@@ -76,13 +91,13 @@
 - name: katello | copy answers file
   template: src=answers.katello-installer.yaml.j2 dest=/etc/katello-installer/answers.katello-installer.yaml
   tags:
-  - katello-install
+  - katello
 
 ## katello installer
 - name: katello | installation
   shell: export LC_ALL="en_US.UTF-8"; export LANG="en_US.UTF-8"; /usr/sbin/katello-installer
   tags:
-  - katello-install
+  - katello
 
 ## configure hammer
 - file: path=~/.hammer state=directory mode=0755
@@ -114,7 +129,7 @@
   command: hammer repository-set enable --organization {{ satellite_org }} --product "Red Hat Enterprise Linux Server" --name "Red Hat Satellite Tools 6.1 (for RHEL 7 Server) (RPMs)" --basearch "x86_64"
   tags:
   - repos
-- name: hammer | enable satellite tools repo
+- name: hammer | enable rhel extras repo
   command: hammer repository-set enable --organization {{ satellite_org }} --product "Red Hat Enterprise Linux Server" --name "Red Hat Enterprise Linux 7 Server - Extras (RPMs)" --basearch "x86_64"
   tags:
   - repos
